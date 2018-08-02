@@ -167,8 +167,9 @@ priv.symlink = (chain, cb) => {
         }
         return fs.symlink(chainPublicPath, chainPublicLink, cb)
       })
+    } else {
+      return setImmediate(cb)
     }
-    return setImmediate(cb)
   })
 }
 
@@ -317,6 +318,8 @@ priv.readJson = (file, cb) => {
 }
 
 priv.launchApp = (chain, params, cb) => {
+  library.logger.info('LAUNCH APP')
+
   const chainPath = path.join(priv.chainBaseDir, chain.name)
 
   const sandbox = new Sandbox(
