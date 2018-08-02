@@ -450,7 +450,7 @@ Chains.prototype.onNewBlock = (block) => {
 }
 
 priv.getChainByName = async (name) => {
-  const chain = app.sdb.get('Chain', { name })
+  const chain = await app.sdb.get('Chain', { name })
   return chain
 }
 
