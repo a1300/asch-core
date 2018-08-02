@@ -273,6 +273,7 @@ priv.launch = (body, cb) => {
       installedIds: async.apply(priv.getInstalledIds),
 
       symlink: ['chain', 'installedIds', (next, results) => {
+        library.logger.info(`next: ${JSON.stringify(next)}, results: ${JSON.stringify(results, null, 2)}`)
         if (results.installedIds.indexOf(body.name) < 0) {
           return next('Chain not installed')
         }
@@ -280,11 +281,13 @@ priv.launch = (body, cb) => {
       }],
 
       launch: ['symlink', (next, results) => {
+        library.logger.info(`symlink: results.chain: ${results.chain}, params: ${body.params}, next: ${next}`)
         priv.launchApp(results.chain, body.params, next)
       }],
 
       route: ['launch', (next, results) => {
         priv.chainRoutes(results.chain, (err2) => {
+          library.logger.info(`err2: ${err2.message}`)
           if (err2) {
             return priv.stop(results.chain, next)
           }
@@ -293,6 +296,7 @@ priv.launch = (body, cb) => {
       }],
     }, (err3) => {
       if (err3) {
+        library.logger.info(`chainBaseDir: ${priv.chainBaseDir}, name: ${body.name}`)
         library.logger.error(`Failed to launch chain ${body.name}: ${err3}`)
         cb('Failed to launch chain')
       } else {
