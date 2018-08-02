@@ -297,6 +297,9 @@ priv.launch = (body, cb) => {
     }, (err3) => {
       if (err3) {
         library.logger.info(`chainBaseDir: ${priv.chainBaseDir}, name: ${body.name}`)
+        library.logger.info(`priv: ${JSON.stringify(priv, null, 2)}`)
+        let strack = new Error().stack
+        library.logger.info(`stack: ${strack}`)
         library.logger.error(`Failed to launch chain ${body.name}: ${err3}`)
         cb('Failed to launch chain')
       } else {
