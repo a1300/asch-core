@@ -240,6 +240,8 @@ priv.chainRoutes = (chain, cb) => {
 }
 
 priv.launch = (body, cb) => {
+  library.logger.info(`2. priv.launch(), validate ${JSON.stringify(body)}`)
+
   library.scheme.validate(body, {
     type: 'object',
     properties: {
@@ -258,11 +260,16 @@ priv.launch = (body, cb) => {
     },
     required: ['name'],
   }, (err) => {
+
+    library.logger.info(`3. validated()`)
     if (err) {
+      library.logger.info(`4. validation failed()`)
       return cb(err[0].message)
     }
 
+    library.logger.info(`5. isAlreadyChained()`)
     if (priv.launched[body.name]) {
+      library.logger.info(`6. chainAlreadyLaunched()`)
       return cb('Chain already launched')
     }
 
@@ -274,29 +281,47 @@ priv.launch = (body, cb) => {
       installedIds: async.apply(priv.getInstalledIds),
 
       symlink: ['chain', 'installedIds', (next, results) => {
+        library.logger.info(`7. symlink() next: ${JSON.stringify(next)}, results: ${JSON.stringify(results)}`)
+
+        library.logger.info(`8. checkIfChainIsInstalled()`)
         if (results.installedIds.indexOf(body.name) < 0) {
+          library.logger.info(`9. chainNotInstalled()`)
           return next('Chain not installed')
         }
+        library.logger.info(`10. chain installed()`)
+
+        library.logger.info(`11. return privSymlink()`)
         return priv.symlink(results.chain, next)
       }],
 
       launch: ['symlink', (next, results) => {
+        library.logger.info(`12. goingTo launchApp()`)
         priv.launchApp(results.chain, body.params, next)
       }],
 
       route: ['launch', (next, results) => {
+        library.logger.info(`13. route launch()`)
+
         priv.chainRoutes(results.chain, (err2) => {
+          library.logger.info(`14. called chainRoutes()`)
           if (err2) {
+            library.logger.info(`15. error during chainRoutes()`)
             return priv.stop(results.chain, next)
           }
+
+          library.logger.info(`16. return next chainRoutes()`)
           return next()
         })
       }],
     }, (err3) => {
+
+      library.logger.info(`17. finished async.series()`)
       if (err3) {
+        library.logger.info(`18. error err3()`)
         library.logger.error(`Failed to launch chain ${body.name}: ${err3}`)
         cb('Failed to launch chain')
       } else {
+        library.logger.info(`19. priv.launched()`)
         priv.launched[body.name] = true
         cb()
       }
@@ -393,6 +418,7 @@ Chains.prototype.cleanup = (cb) => {
 }
 
 Chains.prototype.onBlockchainReady = () => {
+  library.logger.info(`1. Chains.prototype.onBlockchainReady()`)
   priv.getInstalledIds((err, chains) => {
     library.logger.debug('find local installed chains', chains)
     if (err) {
