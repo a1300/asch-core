@@ -119,7 +119,7 @@ priv.get = (name, cb) => (async () => {
 
 priv.getByNames = (names, cb) => (async () => {
   try {
-    const chains = app.sdb.getAll('Chain', c => names.includes(c.name))
+    const chains = await app.sdb.getAll('Chain', c => names.includes(c.name))
     return cb(null, chains)
   } catch (e) {
     library.logger.error(e)
@@ -443,7 +443,7 @@ Chains.prototype.onNewBlock = (block) => {
 }
 
 priv.getChainByName = async (name) => {
-  const chain = app.sdb.get('Chain', { name })
+  const chain = await app.sdb.get('Chain', { name })
   return chain
 }
 
