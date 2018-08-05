@@ -105,7 +105,7 @@ Blocks.prototype.toAPIV1Block = (block) => {
     generatorPublicKey: block.delegate,
     blockSignature: block.signature,
     confirmations: self.getLastBlock().height - block.height,
-    transactions: modules.transactions.toAPIV1Transactions(block.transactions, block),
+    transactions: !block.transactions ? undefined : modules.transactions.toAPIV1Transactions(block.transactions.filter( t => t.executed ), block),
 
     // "generatorId":  => missing
     // "totalAmount" => missing
@@ -364,6 +364,8 @@ Blocks.prototype.processBlock = async (b, options) => {
     if (options.broadcast) {
       options.votes.signatures = options.votes.signatures.slice(0, 6)
       library.bus.message('newBlock', block, options.votes)
+    } else {
+      modules.chains.onNewBlock(block)
     }
   } catch (e) {
     app.logger.error(block)
@@ -534,8 +536,8 @@ Blocks.prototype.loadBlocksFromPeer = (peer, id, cb) => {
           return next(`Invalid response body format: ${e.toString()}`)
         }
         const blocks = body.blocks
-        library.logger.info(`Loading ${blocks.length} blocks from`, address)
-        if (blocks.length === 0) {
+        library.logger.info(`Loading ${isArray(blocks) ? blocks.length : 0} blocks from`, address)
+        if (!isArray(blocks) || blocks.length === 0) {
           loaded = true
           return next()
         }
@@ -920,15 +922,26 @@ shared.getFullBlock = (req, cb) => {
 
     return (async () => {
       try {
-        let block
+        let block = undefined
         if (query.id) {
-          block = await app.sdb.getBlockById(query.id, true)
+          block = await app.sdb.getBlockById(query.id)
         } else if (query.height !== undefined) {
-          block = await app.sdb.getBlockByHeight(query.height, true)
+          block = await app.sdb.getBlockByHeight(query.height)
+        }
+        if (!block) return cb('Block not found')
+
+        const callback = ( err, ret ) => {
+          if ( err ) return cb( err )
+          block = self.toAPIV1Block(block)
+          block.transactions = ret.transactions
+          block.numberOfTransactions = isArray(block.transactions) ? block.transactions.length : 0
+          return cb( null, { block } )
         }
 
-        if (!block) return cb('Block not found')
-        return cb(null, { block: self.toAPIV1Block(block) })
+        req.body.blockId = block.id
+        req.body.unlimited = true
+        delete req.body.id // delete blockId
+        return modules.transactions.getTransactionsForV1(req, callback)
       } catch (e) {
         library.logger.error('Failed to find block', e)
         return cb('Server error')
