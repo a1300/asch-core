@@ -276,7 +276,6 @@ priv.launch = (body, cb) => {
 
       symlink: ['chain', 'installedIds', (next, results) => {
         if (results.installedIds.indexOf(body.name) < 0) {
-          library.logger.info(`9. chainNotInstalled()`)
           return next('Chain not installed')
         }
         return priv.symlink(results.chain, next)
@@ -321,8 +320,6 @@ priv.readJson = (file, cb) => {
 }
 
 priv.launchApp = (chain, params, cb) => {
-  library.logger.info('LAUNCH APP')
-
   const chainPath = path.join(priv.chainBaseDir, chain.name)
 
   const sandbox = new Sandbox(
