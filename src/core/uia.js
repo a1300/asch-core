@@ -65,7 +65,7 @@ UIA.prototype.sandboxApi = (call, args, cb) => {
 
 function trimPrecision(amount, precision) {
   const s = amount.toString()
-  return Number.parseInt(s.substr(0, s.length - precision), 10)
+  return String(Number.parseInt(s.substr(0, s.length - precision), 10))
 }
 
 UIA.prototype.toAPIV1UIABalances = (balances) => {
@@ -73,8 +73,9 @@ UIA.prototype.toAPIV1UIABalances = (balances) => {
   const assetMap = new Map()
   app.sdb.getAll('Asset').forEach(asset => assetMap.set(asset.name, self.toAPIV1Asset(asset)))
 
-  return balances.map(b => (
-    assetMap.has(b.currency) ? Object.assign(b, assetMap.get(b.currency)) : b))
+  return balances.map(b => {
+    b.balance = String(b.balance)
+    return assetMap.has(b.currency) ? Object.assign(b, assetMap.get(b.currency)) : b})
 }
 
 UIA.prototype.toAPIV1Assets = assets => ((assets && isArray(assets) && assets.length > 0)
@@ -87,9 +88,9 @@ UIA.prototype.toAPIV1Asset = (asset) => {
   return {
     name: asset.name,
     desc: asset.desc,
-    maximum: asset.maximum,
+    maximum: String(asset.maximum),
     precision: asset.precision,
-    quantity: asset.quantity,
+    quantity: String(asset.quantity),
     issuerId: asset.issuerId,
     height: asset.height,
     writeoff: 0,
@@ -330,6 +331,7 @@ shared.getBalance = (req, cb) => {
       const condition = { address: req.params.address, currency: req.params.currency }
       const balances = await app.sdb.find('Balance', condition)
       if (!balances || balances.length === 0) return cb('Balance info not found')
+      balances = self.toAPIV1UIABalances(balances)
       return cb(null, { balance: balances[0] })
     } catch (dbErr) {
       return cb(`Failed to get issuers: ${dbErr}`)
@@ -394,9 +396,9 @@ shared.transferAsset = (req, cb) => {
       try {
         const hash = crypto.createHash('sha256').update(query.secret, 'utf8').digest()
         const keypair = ed.MakeKeypair(hash)
-        let secondKeyPair = null
+        let secondKeypair = null
         if (query.secondSecret) {
-          secondKeyPair = ed.MakeKeypair(crypto.createHash('sha256').update(query.secondSecret, 'utf8').digest())
+          secondKeypair = ed.MakeKeypair(crypto.createHash('sha256').update(query.secondSecret, 'utf8').digest())
         }
         const trs = library.base.transaction.create({
           secret: query.secret,
@@ -405,7 +407,7 @@ shared.transferAsset = (req, cb) => {
           senderId: query.senderId || null,
           args: [query.currency, query.amount, query.recipientId],
           message: query.message || null,
-          secondKeyPair,
+          secondKeypair,
           keypair,
         })
         await modules.transactions.processUnconfirmedTransactionAsync(trs)
